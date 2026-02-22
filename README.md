@@ -1,119 +1,98 @@
-# Home Assistant MCP Server
+# Home Assistant MCP + AI Automation Assistant
 
-A Model Context Protocol (MCP) server that connects to your Home Assistant instance, allowing you to query and control your smart home devices through Claude Desktop or other MCP clients.
+Two ways to manage your Home Assistant with AI:
 
-## Features
+1. **MCP Server** (`server.py`) — Use from VS Code / Claude Desktop via the
+   Model Context Protocol to query entities, call services, and create
+   automations through your IDE.
 
-- **Get Entity States**: Query the current state of any Home Assistant entity
-- **Call Services**: Control devices (turn lights on/off, adjust thermostats, etc.)
-- **List Entities**: Browse all entities or filter by domain (lights, switches, sensors, etc.)
-- **Resources**: Access all states and available services as MCP resources
+2. **HA Add-on** (`ha-addon/`) — A self-contained Home Assistant add-on with
+   a chat UI. Accessible from any device via the HA mobile app or browser.
+   The AI has full tool-calling access to list entities, control devices, and
+   create automations that appear immediately in the HA UI.
 
-## Prerequisites
-
-- Python 3.10 or higher
-- Home Assistant instance with API access
-- Home Assistant Long-Lived Access Token
-
-## Setup
-
-### 1. Install Python Dependencies
+## Quick Start — MCP Server
 
 ```bash
+# 1. Install dependencies
 pip install -r requirements.txt
-```
 
-### 2. Configure Home Assistant Connection
+# 2. Configure .env
+cp .env.example .env
+# Edit .env with your HA_URL and HA_TOKEN
 
-Create a `.env` file in the project root:
-
-```bash
-HA_URL=http://your-homeassistant-ip:8123
-HA_TOKEN=your_long_lived_access_token
-```
-
-To create a Long-Lived Access Token:
-1. Open Home Assistant
-2. Click your profile (bottom left)
-3. Scroll to "Long-Lived Access Tokens"
-4. Click "Create Token"
-5. Copy the token to your `.env` file
-
-### 3. Test the Server
-
-Run the server directly:
-
-```bash
+# 3. Run
 python server.py
 ```
 
-## Usage with Claude Desktop
+See [Claude Desktop config](#claude-desktop) below for IDE integration.
 
-Add this to your Claude Desktop configuration file:
+## Quick Start — HA Add-on
 
-**Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
-**macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+1. In HA: **Settings → Add-ons → Add-on Store → ⋮ → Repositories**
+2. Add `https://github.com/vdefreit/homeassistant-mcp`
+3. Install **AI Automation Assistant**, configure your LLM API key, start it
+4. Open the Web UI from the sidebar
+
+Full details in [ha-addon/README.md](ha-addon/README.md).
+
+## Project Structure
+
+```
+├── server.py              # MCP server (VS Code / Claude Desktop)
+├── home_status.py         # Quick home status dashboard
+├── ha-addon/              # Home Assistant add-on
+│   ├── config.yaml        # Add-on manifest
+│   ├── Dockerfile
+│   ├── app/
+│   │   ├── main.py        # FastAPI + WebSocket server
+│   │   ├── llm_backends.py # OpenAI / Claude / Ollama with tool calling
+│   │   ├── ha_client.py   # HA REST API + YAML automation management
+│   │   ├── tools.py       # Tool definitions for LLM function calling
+│   │   └── static/
+│   │       └── index.html # Chat UI
+│   └── run.sh
+├── scripts/               # Utility & test scripts
+├── repository.json        # HA add-on repository manifest
+└── .env.example           # Environment template
+```
+
+## Prerequisites
+
+- Python 3.11+
+- Home Assistant with API access
+- Long-Lived Access Token (Profile → Security → Long-Lived Access Tokens)
+
+## Claude Desktop
+
+Add to `%APPDATA%\Claude\claude_desktop_config.json` (Windows) or
+`~/Library/Application Support/Claude/claude_desktop_config.json` (macOS):
 
 ```json
 {
   "mcpServers": {
     "homeassistant": {
       "command": "python",
-      "args": [
-        "C:\\Users\\vince\\Home Assistant MCP\\server.py"
-      ],
+      "args": ["PATH_TO/server.py"],
       "env": {
-        "HA_URL": "http://your-homeassistant-ip:8123",
-        "HA_TOKEN": "your_token_here"
+        "HA_URL": "http://YOUR_HA_IP:8123",
+        "HA_TOKEN": "YOUR_TOKEN"
       }
     }
   }
 }
 ```
 
-**Important**: Use absolute paths and update the path to match your installation location.
+## MCP Tools
 
-## Available Tools
-
-### get_state
-Get the current state of an entity:
-```
-Get the state of light.living_room
-```
-
-### call_service
-Control devices:
-```
-Turn on the living room light
-Call service light.turn_on for light.living_room with brightness 255
-```
-
-### list_entities
-List all entities or filter by domain:
-```
-List all light entities
-Show me all sensors
-```
-
-## Available Resources
-
-- `ha://states` - All entity states
-- `ha://services` - All available services
-
-## Troubleshooting
-
-**Connection errors**: Verify your HA_URL is correct and Home Assistant is accessible
-**Authentication errors**: Check that your HA_TOKEN is valid and hasn't expired
-**Python not found**: Ensure Python 3.10+ is installed and in your PATH
-
-## Development
-
-Run with debug output:
-```bash
-python server.py
-```
-
-The server uses stdio transport and logs to stderr, so you'll see connection messages when clients connect.
+| Tool | Description |
+|------|-------------|
+| `get_state` | Get current state of any entity |
+| `call_service` | Control devices (lights, switches, climate, etc.) |
+| `list_entities` | List entities, optionally filtered by domain |
+| `create_automation` | Create automations that appear in HA UI |
+| `list_automations` | List existing automations |
+| `delete_automation` | Remove an automation by ID |
 
 ## License
 
