@@ -1,8 +1,5 @@
-[
-  {
-    "repository": {
-      "name": "Home Assistant AI Automation",
-      "url": "https://github.com/vdefreit/homeassistant-mcp"
-    }
-  }
-]
+{
+  "name": "Home Assistant AI Automation",
+  "url": "https://github.com/vdefreit/homeassistant-mcp",
+  "maintainer": "Vince De Freitas"
+}
