@@ -1,5 +1,5 @@
 name: "AI Automation Assistant"
-version: "1.0.1"
+version: "1.0.2"
 slug: "ai_automation_assistant"
 description: "Create and manage Home Assistant automations using natural language AI"
 url: "https://github.com/vdefreit/homeassistant-mcp"
@@ -30,7 +30,7 @@ schema:
   openai_api_key: str?
   openai_model: str?
   openai_base_url: url?
-  openai_disable_thinking: bool?
+  openai_disable_thinking: bool
   claude_api_key: str?
   claude_model: str?
   ollama_url: url?
