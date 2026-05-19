@@ -13,11 +13,23 @@ from typing import Any
 
 TOOLS: list[dict[str, Any]] = [
     {
+        "name": "list_areas",
+        "description": (
+            "List all rooms/areas in the home with the entities assigned to each. "
+            "Use this first for any room-based request (e.g. 'office lights', "
+            "'kitchen devices') to get accurate entity IDs rather than guessing from names."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {},
+        },
+    },
+    {
         "name": "list_entities",
         "description": (
-            "List Home Assistant entities. Without a domain filter, returns a "
-            "summary of entity counts per domain. With a domain filter, returns "
-            "all entities in that domain with their current state."
+            "List Home Assistant entities by domain. Without a domain, returns a "
+            "count summary per domain. With a domain, returns all entities in that "
+            "domain with their current state and friendly name."
         ),
         "parameters": {
             "type": "object",
@@ -35,9 +47,7 @@ TOOLS: list[dict[str, Any]] = [
     },
     {
         "name": "get_entity_state",
-        "description": (
-            "Get the detailed current state and attributes of a specific entity."
-        ),
+        "description": "Get the detailed current state and attributes of a specific entity.",
         "parameters": {
             "type": "object",
             "properties": {
@@ -52,9 +62,9 @@ TOOLS: list[dict[str, Any]] = [
     {
         "name": "call_service",
         "description": (
-            "Call a Home Assistant service to control a device. Examples: "
-            "turn on/off lights, toggle switches, set thermostat temperature, "
-            "play/pause media, send TTS announcements."
+            "Call a Home Assistant service to control a device. Use for turning "
+            "on/off lights, toggling switches, setting thermostat temperature, "
+            "playing/pausing media, and TTS announcements."
         ),
         "parameters": {
             "type": "object",
@@ -81,6 +91,17 @@ TOOLS: list[dict[str, Any]] = [
                 },
             },
             "required": ["domain", "service"],
+        },
+    },
+    {
+        "name": "list_automations",
+        "description": (
+            "List all existing automations with their IDs, names, and descriptions. "
+            "Always call this before creating a new automation to avoid duplicates."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {},
         },
     },
     {
@@ -125,6 +146,20 @@ TOOLS: list[dict[str, Any]] = [
             "required": ["alias", "trigger", "action"],
         },
     },
+    {
+        "name": "delete_automation",
+        "description": "Delete an existing automation by its ID.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "automation_id": {
+                    "type": "string",
+                    "description": "The automation ID to delete (from list_automations).",
+                },
+            },
+            "required": ["automation_id"],
+        },
+    },
 ]
 
 
@@ -136,27 +171,31 @@ SYSTEM_PROMPT = """\
 You are an AI assistant embedded in Home Assistant. You help users create \
 automations, control devices, and understand their smart home.
 
-You have tools to interact with Home Assistant:
-• list_entities – browse available devices and entities
-• get_entity_state – check the current state of any device
-• call_service – control devices (turn on/off, adjust settings, play TTS)
-• create_automation – create automations that appear in the HA UI
+Tools:
+• list_areas – get rooms and their entities (use first for ANY room-based request)
+• list_entities – browse devices by domain (light, switch, sensor, etc.)
+• get_entity_state – check current state of a specific device
+• call_service – control devices (turn on/off, adjust settings, TTS)
+• list_automations – see existing automations (always check before creating)
+• create_automation – create automations visible in HA Settings → Automations
+• delete_automation – remove an automation by ID
 
-Guidelines:
-1. When a user asks to create an automation, first use list_entities to find \
-   the correct entity IDs. Don't guess entity names.
-2. Ask clarifying questions if the request is ambiguous (timing, conditions, \
-   specific devices).
-3. Use proper Home Assistant automation YAML structure for triggers, \
-   conditions, and actions.
-4. After creating or controlling something, confirm what you did.
-5. Be conversational and helpful.
+Rules:
+1. For room/area requests, call list_areas first — never guess entity IDs from names.
+2. Before creating an automation, call list_automations to avoid duplicates.
+3. Use exact entity IDs from tool results — never invent them.
+4. Confirm what you did after every action.
 
-Common trigger platforms: state, time, time_pattern, sun, event, zone, \
-numeric_state, template, device
-Common service domains: light, switch, climate, media_player, automation, \
-scene, script, notify, tts
-Common conditions: state, time, sun, zone, numeric_state, template
+Automation format examples:
+Trigger — time: {{"platform": "time", "at": "22:00:00"}}
+Trigger — state: {{"platform": "state", "entity_id": "binary_sensor.door", "to": "on"}}
+Trigger — sunset: {{"platform": "sun", "event": "sunset", "offset": "+00:30:00"}}
+Trigger — time pattern: {{"platform": "time_pattern", "minutes": "/30"}}
+Action — service: {{"service": "light.turn_off", "target": {{"entity_id": "light.office"}}}}
+Action — TTS: {{"service": "tts.cloud_say", "target": {{"entity_id": "media_player.kitchen"}}, "data": {{"message": "Hello!"}}}}
+Action — delay: {{"delay": {{"seconds": 30}}}}
+Condition — person home: {{"condition": "state", "entity_id": "person.vince", "state": "home"}}
+Condition — time: {{"condition": "time", "after": "22:00:00", "before": "08:00:00"}}
 
 {entity_summary}\
 """

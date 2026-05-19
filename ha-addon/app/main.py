@@ -99,6 +99,21 @@ app = FastAPI(title="AI Automation Assistant", lifespan=lifespan)
 async def execute_tool(name: str, arguments: dict[str, Any]) -> str:
     """Execute a tool call and return a string result for the LLM."""
     try:
+        if name == "list_areas":
+            areas = await ha_client.get_areas()
+            return json.dumps(areas, indent=2)
+
+        if name == "list_automations":
+            automations = await ha_client.list_automations()
+            return json.dumps(automations, indent=2)
+
+        if name == "delete_automation":
+            automation_id = arguments.get("automation_id", "")
+            deleted = await ha_client.delete_automation(automation_id)
+            if deleted:
+                return f"Automation '{automation_id}' deleted successfully."
+            return f"No automation found with ID '{automation_id}'."
+
         if name == "list_entities":
             domain = arguments.get("domain")
             if domain:

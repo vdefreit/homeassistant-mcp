@@ -8,6 +8,7 @@ pooling and async file I/O throughout.
 
 from __future__ import annotations
 
+import json
 import logging
 import time
 from pathlib import Path
@@ -61,6 +62,11 @@ class HomeAssistantClient:
         resp.raise_for_status()
         return resp.json()
 
+    async def _render_template(self, template: str) -> str:
+        resp = await self._client.post("/template", json={"template": template})
+        resp.raise_for_status()
+        return resp.text
+
     # ------------------------------------------------------------------
     # Entity / state queries
     # ------------------------------------------------------------------
@@ -72,6 +78,18 @@ class HomeAssistantClient:
     async def get_state(self, entity_id: str) -> dict:
         """Return state + attributes for a single entity."""
         return await self._get(f"/states/{entity_id}")
+
+    async def get_areas(self) -> list[dict]:
+        """Return all areas with their names and entity IDs."""
+        template = (
+            "{% set ns = namespace(a=[]) %}"
+            "{% for aid in areas() %}"
+            "{% set ns.a = ns.a + [{'id': aid, 'name': area_name(aid), 'entities': area_entities(aid) | list}] %}"
+            "{% endfor %}"
+            "{{ ns.a | tojson }}"
+        )
+        raw = await self._render_template(template)
+        return json.loads(raw)
 
     async def get_entity_summary(self) -> dict[str, int]:
         """Return a {domain: count} mapping of all entities."""
@@ -138,6 +156,31 @@ class HomeAssistantClient:
     async def reload_automations(self) -> None:
         """Tell HA to reload automations from disk."""
         await self._post("/services/automation/reload")
+
+    async def list_automations(self) -> list[dict]:
+        """Return all automations with id, alias, and description."""
+        automations = await self._read_automations()
+        return [
+            {
+                "id": a.get("id", ""),
+                "alias": a.get("alias", ""),
+                "description": a.get("description", ""),
+            }
+            for a in automations
+        ]
+
+    async def delete_automation(self, automation_id: str) -> bool:
+        """Delete an automation by ID and reload. Returns True if found."""
+        automations = await self._read_automations()
+        filtered = [a for a in automations if a.get("id") != automation_id]
+        if len(filtered) == len(automations):
+            return False
+        await self._write_automations(filtered)
+        try:
+            await self.reload_automations()
+        except httpx.HTTPError:
+            logger.warning("Automation deleted but reload failed.")
+        return True
 
     async def create_automation(self, automation: dict) -> str:
         """Append an automation to YAML, reload, and return its generated ID."""
