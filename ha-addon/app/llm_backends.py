@@ -84,12 +84,15 @@ class LLMBackend(ABC):
 # ---------------------------------------------------------------------------
 
 class OpenAIBackend(LLMBackend):
-    """OpenAI GPT backend using the official SDK."""
+    """OpenAI-compatible backend. Supports real OpenAI and local servers like LM Studio."""
 
-    def __init__(self, api_key: str, model: str = "gpt-4o-mini") -> None:
+    def __init__(self, api_key: str, model: str = "gpt-4o-mini", base_url: str | None = None) -> None:
         from openai import AsyncOpenAI
         self.model = model
-        self._client = AsyncOpenAI(api_key=api_key)
+        kwargs: dict[str, Any] = {"api_key": api_key}
+        if base_url:
+            kwargs["base_url"] = base_url.rstrip("/") + "/v1" if not base_url.rstrip("/").endswith("/v1") else base_url
+        self._client = AsyncOpenAI(**kwargs)
 
     async def chat(self, messages, system_prompt, tools=None):
         kwargs: dict[str, Any] = {
@@ -297,9 +300,12 @@ def create_llm_backend(provider: str, config: dict[str, Any]) -> LLMBackend:
 
     if provider == "openai":
         api_key = config.get("openai_api_key", "").strip()
-        if not api_key:
+        base_url = config.get("openai_base_url", "").strip() or None
+        if not api_key and not base_url:
             raise ValueError("OpenAI provider selected but no API key provided.")
-        return OpenAIBackend(api_key, config.get("openai_model", "gpt-4o-mini"))
+        # LM Studio / local servers don't need a real key; use a placeholder if empty
+        effective_key = api_key or "lm-studio"
+        return OpenAIBackend(effective_key, config.get("openai_model", "gpt-4o-mini"), base_url)
 
     if provider == "claude":
         api_key = config.get("claude_api_key", "").strip()

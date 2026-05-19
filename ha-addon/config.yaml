@@ -19,6 +19,7 @@ options:
   llm_provider: "openai"
   openai_api_key: ""
   openai_model: "gpt-4o-mini"
+  openai_base_url: ""
   claude_api_key: ""
   claude_model: "claude-sonnet-4-20250514"
   ollama_url: "http://localhost:11434"
@@ -27,6 +28,7 @@ schema:
   llm_provider: list(openai|claude|ollama)
   openai_api_key: str?
   openai_model: str?
+  openai_base_url: url?
   claude_api_key: str?
   claude_model: str?
   ollama_url: url?

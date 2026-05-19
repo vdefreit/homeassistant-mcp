@@ -43,6 +43,7 @@ def load_config() -> dict[str, Any]:
         "llm_provider": os.getenv("LLM_PROVIDER", "openai"),
         "openai_api_key": os.getenv("OPENAI_API_KEY", ""),
         "openai_model": os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
+        "openai_base_url": os.getenv("OPENAI_BASE_URL", ""),
         "claude_api_key": os.getenv("CLAUDE_API_KEY", ""),
         "claude_model": os.getenv("CLAUDE_MODEL", "claude-sonnet-4-20250514"),
         "ollama_url": os.getenv("OLLAMA_URL", "http://localhost:11434"),
