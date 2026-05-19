@@ -86,9 +86,10 @@ class LLMBackend(ABC):
 class OpenAIBackend(LLMBackend):
     """OpenAI-compatible backend. Supports real OpenAI and local servers like LM Studio."""
 
-    def __init__(self, api_key: str, model: str = "gpt-4o-mini", base_url: str | None = None) -> None:
+    def __init__(self, api_key: str, model: str = "gpt-4o-mini", base_url: str | None = None, disable_thinking: bool = False) -> None:
         from openai import AsyncOpenAI
         self.model = model
+        self._disable_thinking = disable_thinking
         kwargs: dict[str, Any] = {"api_key": api_key}
         if base_url:
             kwargs["base_url"] = base_url.rstrip("/") + "/v1" if not base_url.rstrip("/").endswith("/v1") else base_url
@@ -103,6 +104,8 @@ class OpenAIBackend(LLMBackend):
         if tools:
             kwargs["tools"] = tools
             kwargs["tool_choice"] = "auto"
+        if self._disable_thinking:
+            kwargs["extra_body"] = {"enable_thinking": False}
 
         resp = await self._client.chat.completions.create(**kwargs)
         msg = resp.choices[0].message
@@ -305,7 +308,8 @@ def create_llm_backend(provider: str, config: dict[str, Any]) -> LLMBackend:
             raise ValueError("OpenAI provider selected but no API key provided.")
         # LM Studio / local servers don't need a real key; use a placeholder if empty
         effective_key = api_key or "lm-studio"
-        return OpenAIBackend(effective_key, config.get("openai_model", "gpt-4o-mini"), base_url)
+        disable_thinking = config.get("openai_disable_thinking", False)
+        return OpenAIBackend(effective_key, config.get("openai_model", "gpt-4o-mini"), base_url, disable_thinking)
 
     if provider == "claude":
         api_key = config.get("claude_api_key", "").strip()
